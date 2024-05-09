@@ -36,6 +36,18 @@ namespace fus {
 
                 Message handleGetMessage();
 
+                template<typename DataType>
+                bool sendMessageToClient(fus::net::Connection &connection, int id, const DataType &data)
+                {
+                    return this->m_handleEvent->sendMessageToClient(connection, id, data);
+                }
+
+                template<typename DataType>
+                bool sendMessageAllClient(int id, const DataType &data)
+                {
+                    return this->m_handleEvent->sendMessageAllClient(id, data);
+                }
+
             protected:
             private:
                 std::unique_ptr<HandleEvent> m_handleEvent;

@@ -56,11 +56,10 @@ namespace fus {
                 template <typename DataType>
                 friend Message& operator<<(Message& msg, const DataType &data)
                 {
+                    fus::mes::adapter<DataType> adapter;
                     if (!(std::is_standard_layout<DataType>::value))
                         throw MessageError("Data is not standard layout");
-                    size_t i = msg.size();
-                    msg.m_body.resize(i + sizeof(DataType));
-                    std::memcpy(msg.m_body.data() + i, &data, sizeof(DataType));
+                    adapter.bodySet(msg.m_body, data);
                     msg.m_header.size = msg.size();
                     return msg;
                 }

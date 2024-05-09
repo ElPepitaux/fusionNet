@@ -13,12 +13,17 @@
 int main(int ac, char **av)
 {
     try {
-        fus::net::Server server(1);
+        if (ac != 2) {
+            std::cerr << "Usage: " << av[0] << " <slaves>" << std::endl;
+            return 1;
+        }
+        int nbr = std::stoi(av[1]);
+        fus::net::Server server(nbr);
         fus::net::Message msg;
         std::string str;
+        server.sendMessageAllClient(0, "Hello");
         while (true) {
-            msg =  server.handleGetMessage();
-            std::cout << "NEW" << std::endl;
+            msg = server.handleGetMessage();
             std::cout << msg << std::endl;
             msg >> str;
             std::cout << str << std::endl;

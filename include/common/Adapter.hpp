@@ -17,6 +17,7 @@
     #include <string>
     #include <cstdint>
     #include <type_traits>
+    #include <memory>
 
 namespace fus {
     namespace mes {
@@ -30,6 +31,13 @@ namespace fus {
                 str = std::string(reinterpret_cast<char *>(body.data()), body.size());
                 body.clear();
             }
+
+            void bodySet(std::vector<uint8_t> &body, const std::string &str)
+            {
+                size_t i = body.size();
+                body.resize(i + str.size());
+                std::memcpy(body.data() + i, str.data(), str.size());
+            }
         };
 
         template<typename T>
@@ -40,6 +48,13 @@ namespace fus {
                 size_t i = body.size() - sizeof(T);
                 std::memcpy(&data, body.data() + i, sizeof(T));
                 body.resize(i);
+            }
+
+            void bodySet(std::vector<uint8_t> &body, T data)
+            {
+                size_t i = body.size();
+                body.resize(i + sizeof(T));
+                std::memcpy(body.data() + i, &data, sizeof(T));
             }
         };
 
@@ -52,6 +67,13 @@ namespace fus {
                 std::memcpy(&data, body.data() + i, sizeof(F));
                 body.resize(i);
             }
+
+            void bodySet(std::vector<uint8_t> &body, F data)
+            {
+                size_t i = body.size();
+                body.resize(i + sizeof(F));
+                std::memcpy(body.data() + i, &data, sizeof(F));
+            }
         };
 
         template<typename T>
@@ -62,6 +84,13 @@ namespace fus {
                 size_t i = body.size() - sizeof(T);
                 std::memcpy(&data, body.data() + i, sizeof(T));
                 body.resize(i);
+            }
+
+            void bodySet(std::vector<uint8_t> &body, const T &data)
+            {
+                size_t i = body.size();
+                body.resize(i + sizeof(T));
+                std::memcpy(body.data() + i, &data, sizeof(T));
             }
         };
     }

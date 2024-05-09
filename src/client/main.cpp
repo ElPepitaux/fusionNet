@@ -11,18 +11,14 @@
 int main(int ac, char **av)
 {
     try {
-        fus::net::Client slave("127.0.0.1", 8080);
-        if (!slave.writeMessage(1, "Hello World")) {
-            std::cerr << "Error: writeMessage failed" << std::endl;
-            return 84;
+        if (ac != 3) {
+            std::cerr << "Usage: " << av[0] << " <ip> <port>" << std::endl;
+            return 1;
         }
-        if (!slave.sendMessage()) {
-            std::cerr << "Error: sendMessage failed" << std::endl;
-            return 84;
-        }
-        while (true)
-        {
-            /* code */
+        int port = std::stoi(av[2]);
+        fus::net::Client slave(av[1], port);
+        while (true) {
+
         }
     } catch (const std::exception &e) {
         std::cerr << "Exception: " << e.what() << std::endl;

@@ -28,9 +28,14 @@ namespace fus {
                 ConnectionError(const std::string &message) : Error(message) {}
         };
 
+        class ConnectionLost : public Error {
+            public:
+                ConnectionLost(const std::string &message) : Error(message) {}
+        };
+
         class Connection {
             public:
-                Connection(Connection&& connection);
+                Connection(Connection&& other);
                 Connection(_fd socket, struct sockaddr_in addr);
                 Connection(const std::string &ip, uint32_t port);
                 ~Connection();
@@ -52,6 +57,12 @@ namespace fus {
                 Message readMessage();
 
                 _fd getSocket() const { return m_socket; }
+
+                bool operator==(const Connection &connection);
+
+                bool operator!=(const Connection &connection) const;
+
+                Connection &operator=(const Connection &connection);
 
             protected:
                 bool writeHeader(const message_header &header);

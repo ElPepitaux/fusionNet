@@ -89,7 +89,15 @@ fus::net::Message fus::net::HandleEvent::handleGetMessage()
     }
     for (auto &connection : this->m_connections) {
         if (FD_ISSET(connection.getSocket(), &this->m_readfds)) {
-            return connection.readMessage();
+            try {
+                return connection.readMessage();
+            } catch (const ConnectionLost &e) {
+                std::cerr << e.what() << std::endl;
+                connection.onDisconnection();
+                auto it = std::find(this->m_connections.begin(), this->m_connections.end(), connection);
+                    this->m_connections.erase(it);
+                return Message();
+            }
         }
     }
     return Message();

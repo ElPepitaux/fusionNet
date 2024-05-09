@@ -31,7 +31,6 @@ fus::net::Connection::Connection(const std::string &ip, uint32_t port)
 
 fus::net::Connection::~Connection()
 {
-    close(this->m_socket);
 }
 
 void fus::net::Connection::onDisconnection()
@@ -93,12 +92,33 @@ fus::net::Message fus::net::Connection::readMessage()
 {
     Message msg;
     message_header header;
-    if (recv(this->m_socket, &header, sizeof(header), 0) == -1)
+    int ret = recv(this->m_socket, &header, sizeof(header), 0);
+    if (ret == -1)
         throw ConnectionError("[Client ERROR]: recv failed");
+    if (ret == 0)
+        throw ConnectionLost("[Client ERROR]: connection closed");
     msg.headerSet(header);
     std::vector<uint8_t> body(header.size);
     if (recv(this->m_socket, body.data(), header.size, 0) == -1)
         throw ConnectionError("[Client ERROR]: recv failed");
     msg.bodySet(body);
     return msg;
+}
+
+bool fus::net::Connection::operator==(const Connection &connection)
+{
+    return this->m_socket == connection.m_socket;
+}
+
+bool fus::net::Connection::operator!=(const Connection &connection) const
+{
+    return this->m_socket != connection.m_socket;
+}
+
+fus::net::Connection &fus::net::Connection::operator=(const Connection &connection)
+{
+    this->m_socket = connection.m_socket;
+    this->m_addr = connection.m_addr;
+    this->m_ip = connection.m_ip;
+    return *this;
 }

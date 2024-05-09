@@ -23,6 +23,7 @@
     #include "commonDefine.hpp"
     #include "HandleEvent.hpp"
     #include "Connection.hpp"
+    #include <algorithm>
 
 namespace fus {
     namespace net {
@@ -38,6 +39,32 @@ namespace fus {
                 ~HandleEvent();
 
                 Message handleGetMessage();
+
+                template<typename DataType>
+                bool sendMessageToClient(fus::net::Connection &connection, int id, const DataType &data)
+                {
+                    try {
+                        connection.writeMessage(id, data);
+                        connection.sendMessage();
+                    } catch (const ConnectionLost &e) {
+                        std::cerr << e.what() << std::endl;
+                        connection.onDisconnection();
+                        auto it = std::find(this->m_connections.begin(), this->m_connections.end(), connection);
+                        this->m_connections.erase(it);
+                        return false;
+                    }
+                    return true;
+                }
+
+                template<typename DataType>
+                bool sendMessageAllClient(int id, const DataType &data)
+                {
+                    for (auto &connection : this->m_connections) {
+                        if (!sendMessageToClient(connection, id, data))
+                            return false;
+                    }
+                    return true;
+                }
 
             protected:
                 int _initFdSet();
