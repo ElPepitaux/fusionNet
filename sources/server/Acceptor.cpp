@@ -39,7 +39,7 @@ void fus::net::Acceptor::_socket()
 {
     this->_listenSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_listenSocket == fus::net::NO_FD) {
-        fus::logging::StandardLogger::error("[Server ERROR]: socket creation failed");
+        fus::logging::StandardLogger::error("[Server]: socket creation failed");
         return;
     }
     int opt = 1;

@@ -2,6 +2,7 @@
 
 #include "common/Platform.hpp"
 #include "common/Types.hpp"
+#include "common/Message.hpp"
 
 namespace fus::net {
     class Connection {
@@ -12,9 +13,6 @@ namespace fus::net {
             Connection(const Connection&) = delete;
             Connection& operator=(const Connection&) = delete;
 
-            Connection(Connection&&) noexcept;
-            Connection& operator=(Connection&&) noexcept;
-
             fus::net::_fd socket() const;
 
             bool isConnected() const;
@@ -23,15 +21,21 @@ namespace fus::net {
 
             bool pollRead() const;
 
-            // Message receive();
+            std::vector<fus::common::Message> receive();
 
-            // void send(const Message& msg);
+            void sendMessage(const fus::common::Message& msg);
 
             const struct sockaddr_in& address() const;
 
         private:
+
+            void _receiveData();
+
+            fus::common::MessageHeader _parseMessageHeader();
+
             fus::net::_fd _socket;
             struct sockaddr_in _addr;
             bool _connected = true;
+            std::vector<uint8_t> _recvBuffer;
     };
 }

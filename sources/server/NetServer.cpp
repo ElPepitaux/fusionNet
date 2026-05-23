@@ -2,9 +2,11 @@
 
 fus::net::NetServer::NetServer()
 {
+    fus::logging::StandardLogger::info("[Server] Initializing NetServer...");
     this->_manageConnection = std::make_unique<ManageConnection>();
     this->_acceptor = std::make_shared<Acceptor>();
-    this->_eventLoop = std::make_unique<EventLoop>(this->_acceptor, this->_manageConnection);
+    this->_packetDispatcher = std::make_unique<fus::common::PacketDispatcher>();
+    this->_eventLoop = std::make_unique<EventLoop>(this->_acceptor, this->_manageConnection, this->_packetDispatcher);
 }
 
 fus::net::NetServer::~NetServer()
@@ -40,4 +42,9 @@ void fus::net::NetServer::onConnect(const ConnectCallback& callback)
 void fus::net::NetServer::onDisconnect(const DisconnectCallback& callback)
 {
     this->_eventLoop->onDisconnect(callback);
+}
+
+void fus::net::NetServer::onMessage(const MessageCallback& callback)
+{
+    this->_eventLoop->onMessage(callback);
 }

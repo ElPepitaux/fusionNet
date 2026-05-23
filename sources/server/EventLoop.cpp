@@ -1,8 +1,11 @@
 #include "server/EventLoop.hpp"
 
-fus::net::EventLoop::EventLoop(const std::shared_ptr<Acceptor>& acceptor, const std::shared_ptr<ManageConnection>& manageConnection)
+fus::net::EventLoop::EventLoop(const std::shared_ptr<Acceptor>& acceptor,
+        const std::shared_ptr<ManageConnection>& manageConnection,
+        const std::shared_ptr<fus::common::PacketDispatcher>& packetDispatcher)
  :  _acceptor(acceptor),
-    _manageConnection(manageConnection)
+    _manageConnection(manageConnection),
+    _packetDispatcher(packetDispatcher)
 {
 }
 
@@ -15,7 +18,7 @@ void fus::net::EventLoop::start()
 {
     if (this->_isRunning)
         return;
-    fus::logging::StandardLogger::info("Starting event loop...");
+    fus::logging::StandardLogger::info("[Server] Starting event loop...");
     this->_isRunning = true;
     this->_thread = std::thread(&EventLoop::run, this);
 }
@@ -24,7 +27,7 @@ void fus::net::EventLoop::stop()
 {
     if (!this->_isRunning)
         return;
-    fus::logging::StandardLogger::info("Stopping event loop...");
+    fus::logging::StandardLogger::info("[Server] Stopping event loop...");
     this->_isRunning = false;
     if (this->_thread.joinable())
         this->_thread.join();
@@ -45,13 +48,18 @@ void fus::net::EventLoop::onDisconnect(const DisconnectCallback& callback)
     this->_disconnectCallback = callback;
 }
 
+void fus::net::EventLoop::onMessage(const MessageCallback& callback)
+{
+    this->_messageCallback = callback;
+}
+
 void fus::net::EventLoop::run()
 {
     while (this->_isRunning) {
         this->buildPollFds();
-        int ret = poll(this->_pollFds.data(), this->_pollFds.size(), 1000);
+        int ret = poll(this->_pollFds.data(), this->_pollFds.size(), -1);
         if (ret < 0) {
-            fus::logging::StandardLogger::error("Poll error: " + std::string(strerror(errno)));
+            fus::logging::StandardLogger::error("[Server] Poll error: " + std::string(strerror(errno)));
             continue;
         }
         if (ret == 0)
@@ -66,7 +74,10 @@ void fus::net::EventLoop::buildPollFds()
     this->_pollFds.clear();
     this->_pollFds.push_back({this->_acceptor->listenSocket(), POLLIN, 0});
     for (const auto& connection : this->_manageConnection->getConnections()) {
-        this->_pollFds.push_back({connection->socket(), POLLIN, 0});
+        if (connection->isConnected())
+            this->_pollFds.push_back({connection->socket(), POLLIN, 0});
+        else
+            _manageConnection->removeConnection(connection->socket());
     }
 }
 
@@ -74,7 +85,7 @@ void fus::net::EventLoop::handleNewConnections()
 {
     if (this->_pollFds[0].revents & POLLIN) {
         auto newConnection = this->_acceptor->acceptClient();
-        fus::logging::StandardLogger::info("New connection accepted");
+        fus::logging::StandardLogger::info("[Server] New connection accepted");
         if (newConnection) {
             auto socket = newConnection->socket();
             this->_manageConnection->addConnection(std::move(newConnection));
@@ -90,9 +101,20 @@ void fus::net::EventLoop::handleClientEvents()
         if (this->_pollFds[i].revents & POLLIN) {
             auto connection = this->_manageConnection->getConnection(this->_pollFds[i].fd);
             if (connection) {
-                // Handle incoming data from the client
-                // For example, you can read data and process it here
-                // If the client disconnects, you can call the disconnect callback
+                if (!connection->pollRead()) {
+                    fus::logging::StandardLogger::info("[Server] Connection closed by client");
+                    if (this->_disconnectCallback)
+                        this->_disconnectCallback(connection);
+                    this->_manageConnection->removeConnection(*connection);
+                } else {
+                    fus::logging::StandardLogger::info("[Server] Message received from client socket: " + std::to_string(connection->socket()));
+                    auto messages = connection->receive();
+                    for (auto& msg : messages) {
+                        if (this->_messageCallback)
+                            this->_messageCallback(connection, msg);
+                        this->_packetDispatcher->dispatch(connection, msg);
+                    }
+                }
             }
         }
     }
