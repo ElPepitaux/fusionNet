@@ -1,33 +1,25 @@
-cmake_minimum_required(VERSION 3.29.1)
+cmake_minimum_required(VERSION 3.10)
 
-project(fusion_demo)
+project(fusionnet)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-file(GLOB_RECURSE SOURCES_COMMON "src/common/*.cpp")
+option(BUILD_STATIC_LIBS "Build static libraries instead of shared ones" OFF)
+option(BUILD_EXAMPLES "Build examples" OFF)
 
-file(GLOB_RECURSE SOURCES_MASTER "src/server/*.cpp")
+file(GLOB_RECURSE SOURCES "sources/*.cpp")
 
-file(GLOB_RECURSE SOURCES_SLAVE "src/client/*.cpp")
+include_directories(headers)
 
-add_compile_options(-ggdb)
+if (BUILD_STATIC_LIBS)
+    add_library(${PROJECT_NAME} STATIC ${SOURCES})
+else()
+    add_library(${PROJECT_NAME} SHARED ${SOURCES})
+endif()
 
-set(INCLUDE_MASTER
-    "include/server"
-    "include/common"
-    "include"
-)
-
-set(INCLUDE_SLAVE
-    "include/client"
-    "include/common"
-    "include"
-)
-
-include_directories(include)
-
-include_directories(${INCLUDE_MASTER})
-add_executable(master ${SOURCES_MASTER} ${SOURCES_COMMON})
-
-include_directories(${INCLUDE_SLAVE})
-add_executable(slave ${SOURCES_SLAVE} ${SOURCES_COMMON})
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
