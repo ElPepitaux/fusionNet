@@ -26,7 +26,7 @@ std::shared_ptr<fus::net::Connection> fus::net::Acceptor::acceptClient()
         fus::logging::StandardLogger::error("Error: accept failed");
         return nullptr;
     }
-    fus::logging::StandardLogger::info("Client connected");
+    fus::logging::StandardLogger::info("[Server] Client connected");
     return std::make_shared<fus::net::Connection>(newSocket, addrClient);
 }
 
@@ -44,7 +44,7 @@ void fus::net::Acceptor::_socket()
     }
     int opt = 1;
     if (setsockopt(this->_listenSocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-        fus::logging::StandardLogger::error("Error: setsockopt failed");
+        fus::logging::StandardLogger::error("[Server] Error: setsockopt failed");
         return;
     }
 }
@@ -56,7 +56,7 @@ void fus::net::Acceptor::_bind(fus::net::PORT port)
     this->_addrServer.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(this->_listenSocket, (struct sockaddr *)&this->_addrServer, sizeof(this->_addrServer)) < 0) {
-        fus::logging::StandardLogger::error("Error: bind failed");
+        fus::logging::StandardLogger::error("[Server] Error: bind failed");
         return;
     }
     fus::logging::StandardLogger::info("[Server] Socket binded on port " + std::to_string(port));
@@ -65,7 +65,7 @@ void fus::net::Acceptor::_bind(fus::net::PORT port)
 void fus::net::Acceptor::_listen()
 {
     if (listen(this->_listenSocket, SOMAXCONN) < 0) {
-        fus::logging::StandardLogger::error("Error: listen failed");
+        fus::logging::StandardLogger::error("[Server] Error: listen failed");
         return;
     }
     fus::logging::StandardLogger::info("[Server] Socket listening");
