@@ -48,7 +48,7 @@ bool fus::net::Connection::pollRead() const
 
 std::vector<fus::common::Message> fus::net::Connection::receive()
 {
-    std::vector<fus::common::Message> messages;
+    std::vector<fus::common::Message> messages = {};
     this->_receiveData();
     while (true) {
         auto header = this->_parseMessageHeader();
@@ -61,6 +61,7 @@ std::vector<fus::common::Message> fus::net::Connection::receive()
         messages.push_back(std::move(msg));
 
         this->_recvBuffer.erase(this->_recvBuffer.begin(), this->_recvBuffer.begin() + header.length);
+        fus::logging::StandardLogger::info("[Server] Message received from client socket: " + std::to_string(this->_socket) + " with ID: " + std::to_string(header.id) + " and length: " + std::to_string(header.length));
     }
     return messages;
 }
@@ -70,7 +71,7 @@ void fus::net::Connection::sendMessage(const fus::common::Message& msg)
     if (!this->_connected)
         return;
 
-    fus::common::MessageHeader header;
+    fus::common::MessageHeader header = {};
     header.id = msg.id();
     header.length = msg.body().size();
 
@@ -81,7 +82,7 @@ void fus::net::Connection::sendMessage(const fus::common::Message& msg)
     ssize_t bytesSent = send(this->_socket, buffer.data(), buffer.size(), 0);
     if (bytesSent < 0) {
         fus::logging::StandardLogger::error("[Connection] Send error: " + std::string(strerror(errno)));
-        this->disconnect();
+        throw fus::exception::Send();
     }
 }
 
@@ -92,19 +93,26 @@ const struct sockaddr_in& fus::net::Connection::address() const
 
 void fus::net::Connection::_receiveData()
 {
-    do {
-        uint8_t buffer[1024] = {0};
-        ssize_t bytesRead = recv(this->_socket, buffer, sizeof(buffer), 0);
-        if (bytesRead < 0) {
-            if (errno != EWOULDBLOCK && errno != EAGAIN) {
-                fus::logging::StandardLogger::error("[Connection] Receive error: " + std::string(strerror(errno)));
-                this->disconnect();
-            }
-            break;
+    while (true) {
+        uint8_t temp[4096] = {0};
+
+        ssize_t bytesRead = recv(this->_socket, temp, sizeof(temp), 0);
+
+        if (bytesRead > 0) {
+            this->_recvBuffer.insert(this->_recvBuffer.end(), temp, temp + bytesRead);
+            if (bytesRead < static_cast<ssize_t>(sizeof(temp)))
+                break;
+        } else if (bytesRead == 0) {
+            fus::logging::StandardLogger::info("[Connection] Peer disconnected");
+            throw fus::exception::ClientDisconnected();
         } else {
-            this->_recvBuffer.insert(this->_recvBuffer.end(), buffer, buffer + bytesRead);
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
+            fus::logging::StandardLogger::error("[Connection] recv failed: " + std::string(strerror(errno)));
+            throw fus::exception::Network();
         }
-    } while (true);
+    }
 }
 
 fus::common::MessageHeader fus::net::Connection::_parseMessageHeader()

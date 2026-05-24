@@ -3,6 +3,7 @@
 #include "common/Platform.hpp"
 #include "common/Types.hpp"
 #include "common/Message.hpp"
+#include "common/NetworkException.hpp"
 
 namespace fus::net {
     class Connection {

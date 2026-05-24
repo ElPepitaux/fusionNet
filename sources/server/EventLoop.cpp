@@ -85,10 +85,10 @@ void fus::net::EventLoop::handleNewConnections()
 {
     if (this->_pollFds[0].revents & POLLIN) {
         auto newConnection = this->_acceptor->acceptClient();
-        fus::logging::StandardLogger::info("[Server] New connection accepted");
+        fus::logging::StandardLogger::info("[Server] New connection accepted with socket: " + std::to_string(newConnection->socket()));
         if (newConnection) {
             auto socket = newConnection->socket();
-            this->_manageConnection->addConnection(std::move(newConnection));
+            this->_manageConnection->addConnection(newConnection);
             if (this->_connectCallback)
                 this->_connectCallback(this->_manageConnection->getConnection(socket));
         }
@@ -101,19 +101,20 @@ void fus::net::EventLoop::handleClientEvents()
         if (this->_pollFds[i].revents & POLLIN) {
             auto connection = this->_manageConnection->getConnection(this->_pollFds[i].fd);
             if (connection) {
-                if (!connection->pollRead()) {
-                    fus::logging::StandardLogger::info("[Server] Connection closed by client");
-                    if (this->_disconnectCallback)
-                        this->_disconnectCallback(connection);
-                    this->_manageConnection->removeConnection(*connection);
-                } else {
-                    fus::logging::StandardLogger::info("[Server] Message received from client socket: " + std::to_string(connection->socket()));
+                try {
                     auto messages = connection->receive();
                     for (auto& msg : messages) {
                         if (this->_messageCallback)
                             this->_messageCallback(connection, msg);
                         this->_packetDispatcher->dispatch(connection, msg);
                     }
+                } catch (const fus::exception::ClientDisconnected &e) {
+                    if (_disconnectCallback)
+                        _disconnectCallback(connection);
+
+                    _manageConnection->removeConnection(connection->socket());
+
+                    connection->disconnect();
                 }
             }
         }
