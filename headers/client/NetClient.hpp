@@ -19,7 +19,7 @@ namespace fus::net {
 
             bool isConnected() const;
 
-            template<typename PacketDataType>
+            template<fus::common::PacketData PacketDataType>
             void send(const PacketDataType& data)
             {
                 if (!isConnected()) {
@@ -32,7 +32,7 @@ namespace fus::net {
                 _connection->sendMessage(msg);
             }
 
-            template<typename PacketDataType>
+            template<fus::common::PacketData PacketDataType>
             void onPacket(std::function<void(std::shared_ptr<Connection>, const PacketDataType&)> handler)
             {
                 this->_dispatcher->registerHandler<PacketDataType>(handler);
