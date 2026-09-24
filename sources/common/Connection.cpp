@@ -58,7 +58,7 @@ std::vector<fus::common::Message> fus::net::Connection::receive()
 
         fus::common::Message msg;
         msg.setId(header.id);
-        msg.body().assign(this->_recvBuffer.begin(), this->_recvBuffer.begin() + header.length);
+        msg.setBody(std::vector<uint8_t>(this->_recvBuffer.begin(), this->_recvBuffer.begin() + header.length));
         messages.push_back(std::move(msg));
 
         this->_recvBuffer.erase(this->_recvBuffer.begin(), this->_recvBuffer.begin() + header.length);

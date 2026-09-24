@@ -28,4 +28,10 @@ const std::vector<fus::common::Byte> &fus::common::Message::body() const
 void fus::common::Message::setBody(const std::vector<Byte> &body)
 {
     _body = body;
+    _readPos = 0;
+}
+
+void fus::common::Message::resetReadPos() const
+{
+    _readPos = 0;
 }

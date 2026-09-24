@@ -29,6 +29,7 @@ namespace fus::common {
             {
                 HandlerFunction wrapper = [handler](std::shared_ptr<net::Connection> conn, const Message& message) {
                     PacketDataType data;
+                    message.resetReadPos();
                     message.read(data);
                     handler(conn, data);
                 };

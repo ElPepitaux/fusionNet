@@ -27,6 +27,8 @@ namespace fus::common {
 
             void setBody(const std::vector<Byte>& body);
 
+            void resetReadPos() const;
+
             template<typename T>
             void write(const T& data)
             {
@@ -37,11 +39,12 @@ namespace fus::common {
             template<typename T>
             void read(T& data) const
             {
-                if (_body.size() < sizeof(T)) {
+                if (_readPos + sizeof(T) > _body.size()) {
                     fus::logging::StandardLogger::error("Not enough data to read into type: " + std::string(typeid(T).name()));
                     return;
                 }
-                std::memcpy(&data, _body.data(), sizeof(T));
+                std::memcpy(&data, _body.data() + _readPos, sizeof(T));
+                _readPos += sizeof(T);
             }
 
 
@@ -49,5 +52,6 @@ namespace fus::common {
         private:
             ID _id = 0;
             std::vector<Byte> _body;
+            mutable size_t _readPos = 0;
     };
 } // namespace fus::common
