@@ -43,10 +43,15 @@ void fus::net::Acceptor::_socket()
         return;
     }
     int opt = 1;
-    if (setsockopt(this->_listenSocket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+    if (setsockopt(this->_listenSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         fus::logging::StandardLogger::error("[Server] Error: setsockopt failed");
         return;
     }
+    if (setsockopt(this->_listenSocket, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+        fus::logging::StandardLogger::error("[Server] Error: setsockopt failed");
+        return;
+    }
+    fus::logging::StandardLogger::info("[Server] Socket created");
 }
 
 void fus::net::Acceptor::_bind(fus::net::PORT port)

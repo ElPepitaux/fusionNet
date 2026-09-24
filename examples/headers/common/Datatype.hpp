@@ -5,7 +5,7 @@
 #include <cstring>
 
 struct example_packet_data {
-    static constexpr uint32_t ID = 1;
+    static constexpr uint16_t ID = 1;
 
     int value;
 

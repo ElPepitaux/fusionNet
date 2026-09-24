@@ -52,7 +52,8 @@ std::vector<fus::common::Message> fus::net::Connection::receive()
     this->_receiveData();
     while (true) {
         auto header = this->_parseMessageHeader();
-        if (header.length == 0 || this->_recvBuffer.size() < header.length)
+
+        if (header.length == 0)
             break; // Not enough data for a complete message
 
         fus::common::Message msg;
@@ -72,18 +73,22 @@ void fus::net::Connection::sendMessage(const fus::common::Message& msg)
         return;
 
     fus::common::MessageHeader header = {};
-    header.id = msg.id();
-    header.length = msg.body().size();
+    header.id = htons(msg.id());
+    header.length = htonl(static_cast<uint32_t>(msg.body().size()));
 
     std::vector<uint8_t> buffer(sizeof(header) + msg.body().size());
     std::memcpy(buffer.data(), &header, sizeof(header));
     std::memcpy(buffer.data() + sizeof(header), msg.body().data(), msg.body().size());
 
-    ssize_t bytesSent = send(this->_socket, buffer.data(), buffer.size(), 0);
-    if (bytesSent < 0) {
-        fus::logging::StandardLogger::error("[Connection] Send error: " + std::string(strerror(errno)));
-        throw fus::exception::Send();
-    }
+    ssize_t totalSent = 0;
+    do {
+        ssize_t sent = send(this->_socket, buffer.data() + totalSent, buffer.size() - totalSent, 0);
+        if (sent < 0) {
+            fus::logging::StandardLogger::error("[Connection] Send failed: " + std::string(strerror(errno)));
+            throw fus::exception::Send();
+        }
+        totalSent += sent;
+    } while (totalSent < static_cast<ssize_t>(buffer.size()));
 }
 
 const struct sockaddr_in& fus::net::Connection::address() const
@@ -122,6 +127,12 @@ fus::common::MessageHeader fus::net::Connection::_parseMessageHeader()
 
     fus::common::MessageHeader header;
     std::memcpy(&header, this->_recvBuffer.data(), sizeof(header));
+    header.id = ntohs(header.id);
+    header.length = ntohl(header.length);
+
+    if (this->_recvBuffer.size() < sizeof(fus::common::MessageHeader) + header.length)
+        return fus::common::MessageHeader{}; // Not enough data for body
+
     this->_recvBuffer.erase(this->_recvBuffer.begin(), this->_recvBuffer.begin() + sizeof(header));
     return header;
 }

@@ -13,7 +13,7 @@ namespace fus::common {
     concept PacketData =
     requires(const T& data, const std::vector<fus::common::Byte>& bytes)
     {
-        requires std::same_as<decltype(T::ID), const uint32_t>;
+        requires std::same_as<decltype(T::ID), const uint16_t>;
 
         { T::serialize(data) } -> std::same_as<std::vector<fus::common::Byte>>;
         { T::deserialize(bytes) } -> std::same_as<T>;

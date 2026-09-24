@@ -6,10 +6,12 @@
 
 namespace fus::common {
 
+    #pragma pack(push, 1)
     struct MessageHeader {
         ID id;
         uint32_t length;
     };
+    #pragma pack(pop)
     class Message {
         public:
             Message() = default;
