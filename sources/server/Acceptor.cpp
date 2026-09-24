@@ -23,6 +23,8 @@ std::shared_ptr<fus::net::Connection> fus::net::Acceptor::acceptClient()
     struct sockaddr_in addrClient;
     _fd newSocket = accept(this->_listenSocket, (struct sockaddr *)&addrClient, &addrlen);
     if (newSocket < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return nullptr;
         fus::logging::StandardLogger::error("Error: accept failed");
         return nullptr;
     }
@@ -49,6 +51,11 @@ void fus::net::Acceptor::_socket()
     }
     if (setsockopt(this->_listenSocket, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
         fus::logging::StandardLogger::error("[Server] Error: setsockopt failed");
+        return;
+    }
+    int flags = fcntl(this->_listenSocket, F_GETFL, 0);
+    if (flags == -1 || fcntl(this->_listenSocket, F_SETFL, flags | O_NONBLOCK) < 0) {
+        fus::logging::StandardLogger::error("[Server] Error: fcntl failed");
         return;
     }
     fus::logging::StandardLogger::info("[Server] Socket created");

@@ -2,6 +2,10 @@
 
 fus::net::Connection::Connection(fus::net::_fd socket, const struct sockaddr_in &addr) : _socket(socket), _addr(addr)
 {
+    int flags = fcntl(this->_socket, F_GETFL, 0);
+    if (flags == -1 || fcntl(this->_socket, F_SETFL, flags | O_NONBLOCK) < 0) {
+        fus::logging::StandardLogger::error("[Connection] Failed to set non-blocking: " + std::string(strerror(errno)));
+    }
 }
 
 fus::net::Connection::~Connection()
@@ -81,14 +85,29 @@ void fus::net::Connection::sendMessage(const fus::common::Message& msg)
     std::memcpy(buffer.data() + sizeof(header), msg.body().data(), msg.body().size());
 
     ssize_t totalSent = 0;
-    do {
+    while (totalSent < static_cast<ssize_t>(buffer.size())) {
         ssize_t sent = send(this->_socket, buffer.data() + totalSent, buffer.size() - totalSent, 0);
         if (sent < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd;
+                pfd.fd = this->_socket;
+                pfd.events = POLLOUT;
+                int ret = poll(&pfd, 1, -1);
+                if (ret < 0) {
+                    if (errno == EINTR)
+                        continue;
+                    fus::logging::StandardLogger::error("[Connection] Poll error: " + std::string(strerror(errno)));
+                    throw fus::exception::Send();
+                }
+                continue;
+            }
+            if (errno == EINTR)
+                continue;
             fus::logging::StandardLogger::error("[Connection] Send failed: " + std::string(strerror(errno)));
             throw fus::exception::Send();
         }
         totalSent += sent;
-    } while (totalSent < static_cast<ssize_t>(buffer.size()));
+    }
 }
 
 const struct sockaddr_in& fus::net::Connection::address() const
