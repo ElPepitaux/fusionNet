@@ -1,9 +1,11 @@
 #pragma once
 
 #include "common/Logger.hpp"
+#include "common/IPoller.hpp"
 #include "server/ManageConnection.hpp"
 #include "server/Acceptor.hpp"
 #include "common/PacketDispatcher.hpp"
+#include "common/ThreadPool.hpp"
 
 namespace fus::net {
     class EventLoop {
@@ -28,11 +30,9 @@ namespace fus::net {
         private:
             void run();
 
-            void buildPollFds();
+            void handleNewConnections(const std::vector<Event>& events);
 
-            void handleNewConnections();
-
-            void handleClientEvents();
+            void handleClientEvents(const std::vector<Event>& events);
 
             std::shared_ptr<Acceptor> _acceptor;
             std::shared_ptr<ManageConnection> _manageConnection;
@@ -44,7 +44,8 @@ namespace fus::net {
             DisconnectCallback _disconnectCallback                  = nullptr;
             MessageCallback _messageCallback                        = nullptr;
 
-            std::vector<struct pollfd> _pollFds;
+            std::unique_ptr<IPoller> _poller;
+            std::unique_ptr<fus::common::ThreadPool> _threadPool;
 
             std::thread _thread;
 

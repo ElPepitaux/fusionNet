@@ -3,6 +3,7 @@
 fus::net::NetClient::NetClient()
 {
     _dispatcher = std::make_unique<fus::common::PacketDispatcher>();
+    _threadPool = std::make_unique<fus::common::ThreadPool>(4);
 }
 
 fus::net::NetClient::~NetClient()
@@ -78,7 +79,9 @@ void fus::net::NetClient::run()
         if (pollFd.revents & POLLIN) {
             auto messages = _connection->receive();
             for (auto& msg : messages) {
-                _dispatcher->dispatch(_connection, msg);
+                _threadPool->submit([this, msg]() {
+                    _dispatcher->dispatch(_connection, msg);
+                });
             }
         }
     }

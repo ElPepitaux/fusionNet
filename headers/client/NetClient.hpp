@@ -3,6 +3,7 @@
 #include "common/PacketDispatcher.hpp"
 #include "common/Connection.hpp"
 #include "common/Logger.hpp"
+#include "common/ThreadPool.hpp"
 
 namespace fus::net {
     class NetClient {
@@ -48,6 +49,8 @@ namespace fus::net {
             std::thread _pollingThread;
 
             std::atomic<bool> _running = false;
+
+            std::unique_ptr<fus::common::ThreadPool> _threadPool;
 
             void run();
     };
